@@ -54,7 +54,7 @@
     - [Cloudflare 部署](#cloudflare-部署)
       - [普通部署（localstorage）](#普通部署localstorage-2)
       - [D1 支持](#d1-支持)
-    - [Docker 部署(目前版本仅为2.7.4)](#docker-部署目前版本仅为274)
+    - [Docker 部署](#docker-部署)
       - [直接运行（最简单，localstorage）](#直接运行最简单localstorage)
       - [Docker Compose](#docker-compose)
         - [local storage 存储](#local-storage-存储)
@@ -63,6 +63,8 @@
   - [配置说明](#配置说明)
   - [管理员配置](#管理员配置)
   - [AndroidTV 使用](#androidtv-使用)
+  - [TVBox 对接](#tvbox-对接)
+  - [Selene 使用](#selene-使用)
   - [Roadmap](#roadmap)
   - [安全与隐私提醒](#安全与隐私提醒)
     - [请设置密码保护并关闭公网注册](#请设置密码保护并关闭公网注册)
@@ -80,7 +82,7 @@
 | 语言      | TypeScript 4                                                                                          |
 | 播放器    | [ArtPlayer](https://github.com/zhw2590582/ArtPlayer) · [HLS.js](https://github.com/video-dev/hls.js/) |
 | 代码质量  | ESLint · Prettier · Jest                                                                              |
-| 部署      | Docker · Vercel ·  pages                                                                    |
+| 部署      | Docker · Vercel · pages                                                                               |
 
 ## 部署
 
@@ -166,7 +168,7 @@
 4. 设置环境变量 NEXT_PUBLIC_STORAGE_TYPE，值为 **d1**；设置 USERNAME 和 PASSWORD 作为站长账号
 5. 重试部署
 
-### Docker 部署(目前版本仅为2.7.4)
+### Docker 部署
 
 #### 直接运行（最简单，localstorage）
 
@@ -228,7 +230,7 @@ services:
 | UPSTASH_TOKEN                       | upstash redis 连接 token                     | 连接 token                       | 空                                                                                                                         |
 | NEXT_PUBLIC_ENABLE_REGISTER         | 是否开放注册，仅在非 localstorage 部署时生效 | true / false                     | false                                                                                                                      |
 | NEXT_PUBLIC_SEARCH_MAX_PAGE         | 搜索接口可拉取的最大页数                     | 1-50                             | 5                                                                                                                          |
-| NEXT_PUBLIC_DOUBAN_PROXY_TYPE       | 豆瓣数据源请求方式                           | 见下方                           |                                                                                               direct                      |
+| NEXT_PUBLIC_DOUBAN_PROXY_TYPE       | 豆瓣数据源请求方式                           | 见下方                           | direct                                                                                                                     |
 | NEXT_PUBLIC_DOUBAN_PROXY            | 自定义豆瓣数据代理 URL                       | url prefix                       | (空)                                                                                                                       |
 | NEXT_PUBLIC_DOUBAN_IMAGE_PROXY_TYPE | 豆瓣图片代理类型                             | 见下方                           | direct                                                                                                                     |
 | NEXT_PUBLIC_DOUBAN_IMAGE_PROXY      | 自定义豆瓣图片代理 URL                       | url prefix                       | (空)                                                                                                                       |
@@ -254,12 +256,11 @@ NEXT_PUBLIC_DOUBAN_IMAGE_PROXY_TYPE 选项解释：
 
 ## 配置说明
 
-如果为localstorage模式所有可自定义项集中在根目录的 `config.json` 中(localstorage模式)
-非localstorage可在部署好的网页中直接配置
+如果为 localstorage 模式所有可自定义项集中在根目录的 `config.json` 中(localstorage 模式)
+非 localstorage 可在部署好的网页中直接配置
 
 ```json
 {
-  "cache_time": 7200,
   "api_site": {
     "dyttzy": {
       "api": "http://caiji.dyttzyapi.com/api.php/provide/vod",
@@ -314,7 +315,24 @@ MoonTV 支持标准的苹果 CMS V10 API 格式。
 
 目前该项目可以配合 [OrionTV](https://github.com/zimplexing/OrionTV) 在 Android TV 上使用，可以直接作为 OrionTV 后端
 
-暂时收藏夹与播放记录和网页端隔离，后续会支持同步用户数据
+## TVBox 对接
+
+- 在首页右上角的“设置”中，开启“启用 TVBox 接口”。
+- 可选择“随机”生成访问密码，或自定义后点击“保存”。
+- 系统会生成可直接复制的接口地址，形式为：`https://你的域名/api/tvbox/config?pwd=你的口令`。
+- 将该地址填入 TVBox 的订阅/配置接口即可使用。
+- 如需关闭对接，关闭开关即可。
+
+### 本地存储(localstorage)模式
+
+- 开关由环境变量控制：`TVBOX_ENABLED=true|false`（默认 true，未设置即开启）
+- 接口访问口令使用登录密码：`PASSWORD`
+- 生成的订阅地址示例：`https://你的域名/api/tvbox/config?pwd=$PASSWORD`
+- 设置面板中的开关与保存在本地模式下仅用于展示（被禁用），请通过环境变量控制。
+
+## Selene 使用
+
+该项目已兼容 [Selene](https://github.com/MoonTechLab/Selene) 在移动端上使用，可以直接作为 Selene 后端
 
 ## Roadmap
 

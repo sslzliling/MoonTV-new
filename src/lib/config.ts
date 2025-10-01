@@ -140,7 +140,7 @@ async function initConfig() {
 
   if (process.env.DOCKER_ENV === 'true') {
     // eslint-disable-next-line @typescript-eslint/no-implied-eval
-    const _require = eval('require') as NodeRequire;
+    const _require = eval('require') as NodeJS.Require;
     const fs = _require('fs') as typeof import('fs');
     const path = _require('path') as typeof import('path');
 
@@ -304,7 +304,9 @@ async function initConfig() {
               process.env.NEXT_PUBLIC_DOUBAN_IMAGE_PROXY_TYPE || 'direct',
             DoubanImageProxy: process.env.NEXT_PUBLIC_DOUBAN_IMAGE_PROXY || '',
             DisableYellowFilter:
-              process.env.NEXT_PUBLIC_DISABLE_YELLOW_FILTER === 'true',
+          process.env.NEXT_PUBLIC_DISABLE_YELLOW_FILTER === 'true',
+        TVBoxEnabled: false,
+        TVBoxPassword: '',
           },
           UserConfig: {
             AllowRegister: process.env.NEXT_PUBLIC_ENABLE_REGISTER === 'true',
@@ -343,6 +345,8 @@ async function initConfig() {
         DoubanImageProxy: process.env.NEXT_PUBLIC_DOUBAN_IMAGE_PROXY || '',
         DisableYellowFilter:
           process.env.NEXT_PUBLIC_DISABLE_YELLOW_FILTER === 'true',
+        TVBoxEnabled: false,
+        TVBoxPassword: '',
       },
       UserConfig: {
         AllowRegister: process.env.NEXT_PUBLIC_ENABLE_REGISTER === 'true',
@@ -411,6 +415,23 @@ export async function getConfig(): Promise<AdminConfig> {
       typeof adminConfig.SiteConfig.DisableYellowFilter === 'boolean'
         ? adminConfig.SiteConfig.DisableYellowFilter
         : process.env.NEXT_PUBLIC_DISABLE_YELLOW_FILTER === 'true';
+    // TVBox 开关与密码默认值
+    const storageType = process.env.NEXT_PUBLIC_STORAGE_TYPE || 'localstorage';
+    if (storageType === 'localstorage') {
+      const raw = process.env.TVBOX_ENABLED;
+      adminConfig.SiteConfig.TVBoxEnabled =
+        raw == null ? true : String(raw).toLowerCase() === 'true';
+      adminConfig.SiteConfig.TVBoxPassword = process.env.PASSWORD || '';
+    } else {
+      adminConfig.SiteConfig.TVBoxEnabled =
+        typeof adminConfig.SiteConfig.TVBoxEnabled === 'boolean'
+          ? adminConfig.SiteConfig.TVBoxEnabled
+          : false;
+      adminConfig.SiteConfig.TVBoxPassword =
+        typeof adminConfig.SiteConfig.TVBoxPassword === 'string'
+          ? adminConfig.SiteConfig.TVBoxPassword
+          : '';
+    }
 
     try {
       fileConfig = JSON.parse(adminConfig.ConfigFile) as ConfigFileStruct;
@@ -457,15 +478,46 @@ export async function getConfig(): Promise<AdminConfig> {
     // 将 Map 转换回数组
     adminConfig.SourceConfig = Array.from(sourceConfigMap.values());
 
-    // 覆盖 CustomCategories
+    // 覆盖 CustomCategories - 只覆盖 from 为 config 的项
     const customCategories = fileConfig.custom_category || [];
-    adminConfig.CustomCategories = customCategories.map((category) => ({
-      name: category.name,
-      type: category.type,
-      query: category.query,
-      from: 'config',
-      disabled: false,
-    }));
+    const customCategoriesMap = new Map(
+      (adminConfig.CustomCategories || []).map((c) => [c.query + c.type, c])
+    );
+
+    customCategories.forEach((category) => {
+      const key = category.query + category.type;
+      const existingCategory = customCategoriesMap.get(key);
+      if (existingCategory) {
+        // 如果已存在，只覆盖 from 为 config 的项
+        if (existingCategory.from === 'config') {
+          existingCategory.name = category.name;
+          existingCategory.type = category.type;
+          existingCategory.query = category.query;
+          existingCategory.from = 'config';
+          existingCategory.disabled = false;
+        }
+      } else {
+        // 如果不存在，创建新条目
+        customCategoriesMap.set(key, {
+          name: category.name,
+          type: category.type,
+          query: category.query,
+          from: 'config',
+          disabled: false,
+        });
+      }
+    });
+
+    // 检查现有分类是否在 fileConfig.custom_category 中，如果不在则标记为 custom
+    const customCategoryKeys = new Set(customCategories.map((c) => c.query + c.type));
+    customCategoriesMap.forEach((category) => {
+      if (!customCategoryKeys.has(category.query + category.type)) {
+        category.from = 'custom';
+      }
+    });
+
+    // 将 Map 转换回数组
+    adminConfig.CustomCategories = Array.from(customCategoriesMap.values());
 
     const ownerUser = process.env.USERNAME || '';
     // 检查配置中的站长用户是否和 USERNAME 匹配，如果不匹配则降级为普通用户
@@ -512,7 +564,7 @@ export async function resetConfig() {
 
   if (process.env.DOCKER_ENV === 'true') {
     // eslint-disable-next-line @typescript-eslint/no-implied-eval
-    const _require = eval('require') as NodeRequire;
+    const _require = eval('require') as NodeJS.Require;
     const fs = _require('fs') as typeof import('fs');
     const path = _require('path') as typeof import('path');
 
